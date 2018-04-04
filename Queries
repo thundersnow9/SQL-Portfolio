@@ -6,4 +6,4 @@
 
 SELECT color
 FROM skuinfo
-WHERE SKU = (SELECT MAX(sku) FROM skuinfo WHERE brand = 'LIZ CLAI') AND brand = 'LIZ CLAI';
+WHERE sku = (SELECT MAX(sku) FROM skuinfo WHERE brand = 'LIZ CLAI') AND brand = 'LIZ CLAI';
