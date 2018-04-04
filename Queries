@@ -1,0 +1,9 @@
+#####################################################################################
+#  What is the color of the Liz Claiborne brand item with the highest SKU # in the  #
+#  Dillard’s database (the Liz Claiborne brand is abbreviated “LIZ CLAI” in the     #
+#  Dillard’s database)?                                                             #
+#####################################################################################
+
+SELECT color
+FROM skuinfo
+WHERE SKU = (SELECT MAX(sku) FROM skuinfo WHERE brand = 'LIZ CLAI') AND brand = 'LIZ CLAI';
