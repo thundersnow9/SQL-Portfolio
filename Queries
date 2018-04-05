@@ -1,9 +1,26 @@
-#####################################################################################
-#  What is the color of the Liz Claiborne brand item with the highest SKU # in the  #
-#  Dillard’s database (the Liz Claiborne brand is abbreviated “LIZ CLAI” in the     #
-#  Dillard’s database)?                                                             #
-#####################################################################################
-
+####################################################################################
+  What is the color of the Liz Claiborne brand item with the highest SKU # in the  
+  Dillard’s database (the Liz Claiborne brand is abbreviated “LIZ CLAI” in the     
+  Dillard’s database)?                                                             
+####################################################################################
 SELECT color
 FROM skuinfo
 WHERE sku = (SELECT MAX(sku) FROM skuinfo WHERE brand = 'LIZ CLAI') AND brand = 'LIZ CLAI';
+
+#####################################################################################
+  What is the sku number of the item in the Dillard’s database that had the highest
+  original sales price?
+#####################################################################################
+SELECT sku
+FROM trnsact
+WHERE orgprice = (SELECT MAX(orgprice) FROM trnsact);
+
+#####################################################################################
+  What register number made the sale with the highest original price and highest sale 
+  price between the dates of August 1, 2004 and August 10, 2004? Make sure to sort by 
+  original price first and sale price second.
+#####################################################################################
+SELECT TOP 10 register, orgprice, sprice, orgprice - sprice AS margin, saledate
+FROM trnsact
+WHERE saledate BETWEEN '2004-08-01' AND '2004-08-10'
+ORDER BY orgprice DESC, sprice DESC;
