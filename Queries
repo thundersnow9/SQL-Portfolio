@@ -102,7 +102,7 @@ ORDER BY register DESC;
 
 ## Think to find more accurate value we would need to add the result of this query:
 (we want to find the total amount that the store paid back to customers who returned products)
-SELECT register, SUM(-t.amt)/COUNT(DISTINCT t.saledate) AS AVG_Purchase_Profit
+SELECT register, SUM(-t.amt)/COUNT(DISTINCT t.saledate) AS AVG_Return_Loss
 FROM trnsact t LEFT JOIN skstinfo s
   ON t.sku = s.sku AND t.store = s.store
 WHERE s.sku IS NOT NULL AND t.stype='R' AND register=640
@@ -111,6 +111,32 @@ ORDER BY register DESC;
 ...-2614.35
 
 Yielding a more accurate average profit of $8164.85... that's what I think anyway.
+
+=== On what day was the total cost of returned items highest? ===
+SELECT t.saledate, SUM(-t.amt) AS Total_Return_Loss
+FROM trnsact t LEFT JOIN skstinfo s
+  ON t.sku = s.sku AND t.store = s.store
+WHERE s.sku IS NOT NULL AND t.stype='R'
+GROUP BY t.saledate
+ORDER BY Total_Return_Loss ASC;
+...2004-12-27 had the most return loss, -$1,212,071.96
+
+## This is a big number so to verify that it is within the realm of possibility, I ran
+## this query:
+
+SELECT t.saledate, SUM(t.sprice-s.cost) AS Total_Purchase_Profit
+FROM trnsact t LEFT JOIN skstinfo s
+  ON t.sku = s.sku AND t.store = s.store
+WHERE s.sku IS NOT NULL AND t.stype='P'
+GROUP BY t.saledate
+ORDER BY Total_Purchase_Profit DESC;
+... On 2005-03-26 had the max total purchase profit, $5,140,397.75
+## In other words, max total return loss represents aobut 24% of max total purchase
+## profit... this is in line with returns accounting for about 24% of the total purchase
+## profit at register 640. So what's happening on the microscale is, apparently, also
+## manifesting in macroscale statistics. Interesting...
+
+ 
 
 /* WEEK ENDING 20180407 */
 ####################################################################################
