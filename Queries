@@ -187,6 +187,18 @@ GROUP BY s.sku, d.deptdesc;
 ## There don't appear to be any duplicates. Makes sense because each dept can have
 ## many SKUs but each SKU can only have one department. Go Dillard's db dev team!
 
+=== What department (with department description), brand, style, and color had the greatest total
+    value of returned items? ===
+
+SELECT d.dept, d.deptdesc, s.brand, s.style, s.color, SUM(-t.amt) AS Value_of_Returned_Items, COUNT(*)
+FROM (trnsact t LEFT JOIN skuinfo s ON t.sku = s.sku) LEFT JOIN deptinfo d
+  ON s.dept = d.dept
+WHERE s.sku IS NOT NULL AND t.stype='R'
+GROUP BY d.dept, d.deptdesc, s.brand, s.style, s.color
+ORDER BY Value_of_Returned_Items ASC;
+
+Can confirm this query retreives the correct data on row 5.
+
 /* WEEK ENDING 20180407 */
 ####################################################################################
   What is the color of the Liz Claiborne brand item with the highest SKU # in the  
