@@ -1,3 +1,54 @@
+## This file contains Teradata SQL queries used for the "Managing Big Data with
+## MySQL" [sic] course on Coursera
+
+/* WEEK ENDING 20180415 */
+
+=== Counts of Distinct sku in skuinfo, skstinfo, trnsact ===
+
+SELECT COUNT(DISTINCT sku)
+FROM skuinfo;
+...1564178 ... {also note that there are no duplicate sku in this table becasue
+                count(sku) provides the same 1564178}
+
+SELECT COUNT(DISTINCT sku)
+FROM skstinfo;
+...760212
+
+SELECT COUNT(DISTINCT sku)
+FROM trnsact;
+...714499
+
+=== Counts of Distinct sku in table pairs using inner joins ===
+  === skuinfo/skstinfo, skuinfo/trnsact, skstinfo/trnsact ===
+
+SELECT COUNT(DISTINCT si.sku)
+FROM skuinfo si LEFT JOIN trnsact t
+  ON si.sku = t.sku
+WHERE t.sku IS NULL;
+...849679
+# Since 1564178 - 849679 = 714499 this query looks like it is performing as expected.
+# Due to many-to relationship between skstinfo and trnsact, we can use the skuinfo
+# table to join these two columns by sku since its primary key is sku and all values
+# are unique. Yay Dillards!
+
+=== Identify whether store + sku pair is unique in trnsact or skstinfo table ===
+
+SELECT store, sku, COUNT(*) AS Total_Instances
+FROM trnsact
+GROUP BY store, sku
+ORDER BY Total_Instances DESC;
+...36099491 rows; Total_Instances >> 1 for many
+
+SELECT store, sku, COUNT(*) AS Total_Instances
+FROM skstinfo
+GROUP BY store, sku
+ORDER BY Total_Instances DESC;
+...36099491 rows; Total_Instances = 1 for all
+# Find that store, sku combine to form a unique pair in skstinfo table, so can be used
+# to join with trnsact table.
+
+
+/* WEEK ENDING 20180407 */
 ####################################################################################
   What is the color of the Liz Claiborne brand item with the highest SKU # in the  
   Dillard’s database (the Liz Claiborne brand is abbreviated “LIZ CLAI” in the     
