@@ -1,5 +1,6 @@
 ## This file contains Teradata SQL queries used for the "Managing Big Data with
-## MySQL" [sic] course on Coursera
+## MySQL" [sic] course on Coursera. This is organied to be best used store queries
+## to reference during the quiz.
 
 /* WEEK ENDING 20180415 */
 
@@ -47,6 +48,69 @@ ORDER BY Total_Instances DESC;
 # Find that store, sku combine to form a unique pair in skstinfo table, so can be used
 # to join with trnsact table.
 
+=== Count distinct stores from strinfo, store_msa, skstinfo, trnsact tables ===
+
+SELECT COUNT(DISTINCT store)
+FROM strinfo;
+...453
+
+SELECT COUNT(DISTINCT store)
+FROM store_msa;
+...333
+
+SELECT COUNT(DISTINCT store)
+FROM skstinfo;
+...357
+
+SELECT COUNT(DISTINCT store)
+FROM trnsact;
+...332
+
+=== Find common features in table produced when outer joining skstinfo and trnsact ===
+             === When an sku is in trnsact but not in skstinfo ===
+
+SELECT *
+FROM skstinfo r RIGHT JOIN trnsact t
+  ON t.sku = r.sku AND t.store = r.store
+WHERE r.sku IS NULL;
+
+# At first glance, and with a few unsuccessful queries into what might be going on with the data,
+# I don't notice any common issues. Although many 'interid' entries are 000000000, this is true
+# for the entire dataset in general.
+
+SELECT t.sku AS sku_missing_info, COUNT(DISTINCT t.store) AS Num_Stores, COUNT(DISTINCT t.interid) AS Num_Interids, COUNT(DISTINCT t.mic) AS Num_mics
+FROM skstinfo r RIGHT JOIN trnsact t
+  ON t.sku = r.sku AND t.store = r.store
+WHERE r.sku IS NULL
+GROUP BY t.sku
+ORDER BY Num_mics DESC;
+
+# Lets me see if there are any obvious patterns in the counts of these variables, but
+# so far, no pattern is noted.
+
+=== Calculate average daily profit ===
+***Note: although according to practice exercises, this query obtains the correct answer,
+   it does not consider the effect of returns on profit***
+
+SELECT register, SUM(t.sprice-s.cost)/COUNT(DISTINCT t.saledate) AS AVG_Purchase_Profit
+FROM trnsact t LEFT JOIN skstinfo s
+  ON t.sku = s.sku AND t.store = s.store
+WHERE s.sku IS NOT NULL AND t.stype='P' AND register=640
+GROUP BY register
+ORDER BY register DESC;
+...10779.20
+
+## Think to find more accurate value we would need to add the result of this query:
+(we want to find the total amount that the store paid back to customers who returned products)
+SELECT register, SUM(-t.amt)/COUNT(DISTINCT t.saledate) AS AVG_Purchase_Profit
+FROM trnsact t LEFT JOIN skstinfo s
+  ON t.sku = s.sku AND t.store = s.store
+WHERE s.sku IS NOT NULL AND t.stype='R' AND register=640
+GROUP BY register
+ORDER BY register DESC;
+...-2614.35
+
+Yielding a more accurate average profit of $8164.85... that's what I think anyway.
 
 /* WEEK ENDING 20180407 */
 ####################################################################################
