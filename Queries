@@ -78,7 +78,8 @@ WHERE r.sku IS NULL;
 # I don't notice any common issues. Although many 'interid' entries are 000000000, this is true
 # for the entire dataset in general.
 
-SELECT t.sku AS sku_missing_info, COUNT(DISTINCT t.store) AS Num_Stores, COUNT(DISTINCT t.interid) AS Num_Interids, COUNT(DISTINCT t.mic) AS Num_mics
+SELECT t.sku AS sku_missing_info, COUNT(DISTINCT t.store) AS Num_Stores,
+COUNT(DISTINCT t.interid) AS Num_Interids, COUNT(DISTINCT t.mic) AS Num_mics
 FROM skstinfo r RIGHT JOIN trnsact t
   ON t.sku = r.sku AND t.store = r.store
 WHERE r.sku IS NULL
@@ -130,13 +131,61 @@ FROM trnsact t LEFT JOIN skstinfo s
 WHERE s.sku IS NOT NULL AND t.stype='P'
 GROUP BY t.saledate
 ORDER BY Total_Purchase_Profit DESC;
-... On 2005-03-26 had the max total purchase profit, $5,140,397.75
+...On 2005-03-26 had the max total purchase profit, $5,140,397.75
 ## In other words, max total return loss represents aobut 24% of max total purchase
 ## profit... this is in line with returns accounting for about 24% of the total purchase
 ## profit at register 640. So what's happening on the microscale is, apparently, also
 ## manifesting in macroscale statistics. Interesting...
 
- 
+## The below query aggrigates sums of returned item quantities by unique sale date.
+
+SELECT t.saledate, SUM(quantity) AS Total_Returned_Items
+FROM trnsact t LEFT JOIN skstinfo s
+  ON t.sku = s.sku AND t.store = s.store
+WHERE s.sku IS NOT NULL AND t.stype='R'
+GROUP BY t.saledate
+ORDER BY Total_Returned_Items DESC;
+...2005-07-30 had the most returned items: 36,984.
+
+=== What are the maximum and minimum sale prices of an item in the database ===
+
+SELECT MAX(sprice), MIN(sprice)
+FROM trnsact;
+...MAX: $6017.00, MIN: $0.00
+
+## Can also aggrigate on the sku level if desired, e.g.
+
+SELECT MAX(sprice), MIN(sprice), sku, COUNT(*)
+FROM trnsact
+GROUP BY sku
+ORDER BY MIN(sprice) ASC;
+...$0 saleprices aren't extremely prolific in the data, but many items do sell way under cost.
+## Expensive items tend to sell for one high price.
+
+=== How many departments have more than 100 brands in them, and what are their descriptions? ===
+Answer: only three of them...
+
+SELECT d.dept, d.deptdesc, COUNT(DISTINCT s.brand) AS Num_Brands
+FROM deptinfo d RIGHT JOIN skuinfo s
+  ON d.dept = s.dept
+GROUP BY d.dept, d.deptdesc
+HAVING Num_Brands > 100
+ORDER BY Num_Brands DESC;
+
+Environ, Colehann, and Carters have 389, 118, and 109 brands respectively.
+
+=== Retreive dept descriptions from each of the skus in the skstinfo table. ===
+
+SELECT s.sku, d.deptdesc
+FROM (skstinfo s LEFT JOIN skuinfo sr ON s.sku = sr.sku) LEFT JOIN deptinfo d
+  ON  sr.dept = d.dept
+WHERE sr.sku IS NOT NULL
+GROUP BY s.sku, d.deptdesc;
+...Confirmed that SKU # 5020024 is 'LESLIE' by adding AND s.sku = 5020024.
+
+## Noted that each of the 760212 skus have a dept description, which is as expected
+## There don't appear to be any duplicates. Makes sense because each dept can have
+## many SKUs but each SKU can only have one department. Go Dillard's db dev team!
 
 /* WEEK ENDING 20180407 */
 ####################################################################################
