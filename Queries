@@ -2,6 +2,26 @@
 ## MySQL" [sic] course on Coursera. This is organied to be best used store queries
 ## for my reference during the quiz (not intended to be used in this manner by future students).
 
+/* WEEK ENDING 20180429 */
+
+=== Counts distinct dates in the database for each month in each year ===
+SELECT EXTRACT(YEAR FROM saledate) AS Year_Num, EXTRACT(MONTH FROM saledate) AS Month_Num, 
+       COUNT(DISTINCT saledate) AS Date_Count
+FROM trnsact
+GROUP BY Year_Num, Month_Num
+ORDER BY Year_Num ASC, Month_Num ASC;
+
+=== Same as above but excludes Aug 2005 data ===
+SELECT EXTRACT(YEAR FROM saledate) AS Year_Num, EXTRACT(MONTH FROM saledate) AS Month_Num, COUNT(DISTINCT saledate) AS Date_Count,
+       CASE WHEN (Month_Num = 8 AND Year_Num = 2005) THEN 'Exclude'
+       ELSE 'Include'
+       END AS Exclusion
+FROM trnsact
+WHERE Exclusion = 'Include'
+GROUP BY Year_Num, Month_Num
+ORDER BY Year_Num ASC, Month_Num ASC;
+
+
 /* WEEK ENDING 20180415 */
 
 === Counts of Distinct sku in skuinfo, skstinfo, trnsact ===
