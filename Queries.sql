@@ -1,6 +1,6 @@
-## This file contains Teradata SQL queries used for the "Managing Big Data with
-## MySQL" [sic] course on Coursera. This is organied to be best used store queries
-## for my reference during the quiz (not intended to be used in this manner by future students).
+/* This file contains Teradata SQL queries used for the "Managing Big Data with
+   MySQL" [sic] course on Coursera. This is organied to be best used store queries
+   for my reference during the quiz (not intended to be used in this manner by future students). */
 
 /* WEEK ENDING 20180429 */
 
@@ -10,8 +10,7 @@ SELECT EXTRACT(YEAR FROM saledate) AS Year_Num, EXTRACT(MONTH FROM saledate) AS 
 FROM trnsact
 GROUP BY Year_Num, Month_Num
 ORDER BY Year_Num ASC, Month_Num ASC;
-
-=== Same as above but excludes Aug 2005 data ===
+--- Same as above but excludes Aug 2005 data ---
 SELECT EXTRACT(YEAR FROM saledate) AS Year_Num, EXTRACT(MONTH FROM saledate) AS Month_Num, COUNT(DISTINCT saledate) AS Date_Count,
        CASE WHEN (Month_Num = 8 AND Year_Num = 2005) THEN 'Exclude'
        ELSE 'Include'
@@ -21,7 +20,7 @@ WHERE Exclusion = 'Include'
 GROUP BY Year_Num, Month_Num
 ORDER BY Year_Num ASC, Month_Num ASC;
 
-=== This sorts total summer sales by SKU ===
+--- This sorts total summer sales by SKU ---
 
 SELECT TOP 10 SUM(CASE WHEN EXTRACT(MONTH from saledate) IN (6,7,8) THEN sprice 
                   END) AS sum_sprice, sku
@@ -29,19 +28,19 @@ FROM trnsact
 WHERE stype = 'P'
 GROUP BY sku
 ORDER BY sum_sprice DESC;
-...Verified fifth highest SKU price matches instructor's value.
+/* Verified fifth highest SKU price matches instructor's value. */
 
-=== Find days with sale by store, year, month ===
+--- Find days with sale by store, year, month ---
 
 SELECT store, EXTRACT(YEAR FROM saledate) AS Year_Num, EXTRACT(MONTH FROM saledate) AS Month_Num, 
        COUNT(DISTINCT saledate) AS days_with_sale
 FROM trnsact
 GROUP BY store, Year_Num, Month_Num
 ORDER BY days_with_sale ASC;
-...Verified that there are few stores that had 1 day with a sale in a month,
-...there were also few stores that had less than the total number of days in a month with a sale.
+/* Verified that there are few stores that had 1 day with a sale in a month,
+   there were also few stores that had less than the total number of days in a month with a sale. */
 
-=== Calculate average daily revenue of the above ===
+--- Calculate average daily revenue of the above ---
 
 SELECT store, EXTRACT(YEAR FROM saledate) AS Year_Num, EXTRACT(MONTH FROM saledate) 
        AS Month_Num, COUNT(DISTINCT saledate) AS days_with_sale, 
@@ -50,8 +49,8 @@ FROM trnsact
 WHERE stype = 'P'
 GROUP BY store, Year_Num, Month_Num
 ORDER BY average_daily_revenue DESC;
-##Added WHERE stype = 'P' so returns are not counted as revenue
-...Verified that store #204 has an avg daily sale price of $16303.65 in Aug 2005
+/* Added WHERE stype = 'P' so returns are not counted as revenue
+   Verified that store #204 has an avg daily sale price of $16303.65 in Aug 2005 */
 
 SELECT t.store AS t_store, EXTRACT(YEAR FROM t.saledate) AS Year_Num, EXTRACT(MONTH FROM t.saledate) 
        AS Month_Num, COUNT(DISTINCT t.saledate) AS days_with_sale, 
@@ -64,9 +63,9 @@ FROM trnsact t
 WHERE t.stype = 'P'
 GROUP BY t_store, Year_Num, Month_Num
 ORDER BY days_with_sale ASC;
-...Sets exclude flag for approprate combinations. Attempted concatenate function but
-...couldn't get it to work properly in CASE statement, attempts to overcome this overcomplicated
-...the query. Probably missing some little trick....
+/* Sets exclude flag for approprate combinations. Attempted concatenate function but
+   couldn't get it to work properly in CASE statement, attempts to overcome this overcomplicated
+   the query. Probably missing some little trick */
 
 /* WEEK ENDING 20180415 */
 
