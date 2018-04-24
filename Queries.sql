@@ -266,6 +266,28 @@ GROUP BY t_store, Year_Num, Month_Num
 HAVING Exclusion = 'Include'
 ORDER BY Month_Ranking ASC;
 
+/* This calculates the total number of stores had their lowest sales in each month */
+SELECT month_num, count(*) AS num_stores, SUM(total_revenue)/SUM(days_with_sale), SUM(total_revenue)
+FROM (SELECT t.store AS t_store, EXTRACT(YEAR FROM t.saledate) AS Year_Num, 
+             EXTRACT(MONTH FROM t.saledate) AS Month_Num, 
+             COUNT(DISTINCT t.saledate) AS days_with_sale, 
+             SUM(t.sprice)/days_with_sale AS avg_daily_revenue,
+             SUM(t.sprice) AS total_revenue,
+             RANK() OVER (PARTITION BY t_store ORDER BY total_revenue ASC) 
+             AS Month_Ranking,
+             CASE WHEN (Month_Num = 8 AND Year_Num = 2005) THEN 'Exclude'
+                  WHEN days_with_sale < 20 THEN 'Exclude'
+             ELSE 'Include'
+             END AS Exclusion
+      QUALIFY Month_Ranking = 1
+      FROM trnsact t
+      WHERE t.stype = 'P'
+      GROUP BY t_store, Year_Num, Month_Num
+      HAVING Exclusion = 'Include'
+      ) AS month_of_max_sum_revenue
+GROUP BY month_num
+ORDER BY month_num ASC;
+
 /* WEEK ENDING 20180415 */
 
 === Counts of Distinct sku in skuinfo, skstinfo, trnsact ===
