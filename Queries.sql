@@ -64,8 +64,207 @@ WHERE t.stype = 'P'
 GROUP BY t_store, Year_Num, Month_Num
 ORDER BY days_with_sale ASC;
 /* Sets exclude flag for approprate combinations. Attempted concatenate function but
-   couldn't get it to work properly in CASE statement, attempts to overcome this overcomplicated
+   couldn't get it to work properly in CASE statement or WHERE statement, attempts to overcome this overcomplicated
    the query. Probably missing some little trick */
+   
+SELECT t.store AS t_store, EXTRACT(YEAR FROM t.saledate) AS Year_Num, EXTRACT(MONTH FROM t.saledate) 
+       AS Month_Num, COUNT(DISTINCT t.saledate) AS days_with_sale, 
+       SUM(t.sprice)/COUNT(DISTINCT t.saledate) AS average_daily_revenue,
+       CASE WHEN (Month_Num = 8 AND Year_Num = 2005) THEN 'Exclude'
+            WHEN days_with_sale < 20 THEN 'Exclude'
+       ELSE 'Include'
+       END AS Exclusion
+FROM trnsact t
+WHERE t.stype = 'P'
+GROUP BY t_store, Year_Num, Month_Num
+HAVING Exclusion = 'Include'
+ORDER BY days_with_sale ASC;
+-- Looks like this query excludes the proper fields, but we shall 
+-- see whether the concatenation is necessary for future querys...
+
+/* To add a column with High School Education level, we'll incorporate the following 
+   query as a subquery in the above query */
+SELECT CASE WHEN msa_high >= 50 AND msa_high <= 60 THEN 'low'
+               WHEN msa_high > 60 AND msa_high <= 70 THEN 'medium'
+               WHEN msa_high > 70 THEN 'high' END AS hs_edu_level, store
+FROM store_msa
+ORDER BY msa_high ASC;
+
+/* Like so */
+
+SELECT t.store AS t_store, EXTRACT(YEAR FROM t.saledate) AS Year_Num, EXTRACT(MONTH FROM t.saledate) 
+       AS Month_Num, COUNT(DISTINCT t.saledate) AS days_with_sale, 
+       SUM(t.sprice)/COUNT(DISTINCT t.saledate) AS average_daily_revenue,
+       store_edu_level.hs_edu_level,
+       CASE WHEN (Month_Num = 8 AND Year_Num = 2005) THEN 'Exclude'
+            WHEN days_with_sale < 20 THEN 'Exclude'
+       ELSE 'Include'
+       END AS Exclusion
+FROM trnsact t JOIN (SELECT CASE WHEN msa_high >= 50 AND msa_high <= 60 THEN 'low'
+                     WHEN msa_high > 60 AND msa_high <= 70 THEN 'medium'
+                     WHEN msa_high > 70 THEN 'high' END AS hs_edu_level, store
+                     FROM store_msa) AS store_edu_level
+                 ON t.store = store_edu_level.store
+WHERE t.stype = 'P'
+GROUP BY t_store, Year_Num, Month_Num, store_edu_level.hs_edu_level
+HAVING Exclusion = 'Include'
+ORDER BY days_with_sale ASC;
+
+/* And then we need to group this table's avg daily sales by High School Education level */
+SELECT tbl.hs_edu_level, SUM(tbl.sum_sprice)/SUM(tbl.days_with_sale) AS avg_daily_revenue
+FROM(SELECT t.store as t_store, EXTRACT(YEAR FROM t.saledate) AS Year_Num, EXTRACT(MONTH FROM t.saledate) 
+             AS Month_Num, COUNT(DISTINCT t.saledate) AS days_with_sale, 
+             SUM(t.sprice) AS sum_sprice,
+             store_edu_level.hs_edu_level,
+             CASE WHEN (Month_Num = 8 AND Year_Num = 2005) THEN 'Exclude'
+                  WHEN days_with_sale < 20 THEN 'Exclude'
+             ELSE 'Include'
+             END AS Exclusion
+      FROM trnsact t JOIN (SELECT CASE WHEN msa_high >= 50 AND msa_high <= 60 THEN 'low'
+                           WHEN msa_high > 60 AND msa_high <= 70 THEN 'medium'
+                           WHEN msa_high > 70 THEN 'high' END AS hs_edu_level, store
+                           FROM store_msa) AS store_edu_level
+                       ON t.store = store_edu_level.store
+      WHERE t.stype = 'P'
+      GROUP BY t_store, Year_Num, Month_Num, store_edu_level.hs_edu_level
+      HAVING Exclusion = 'Include') AS tbl
+GROUP BY hs_edu_level;
+--The education level group avrages from this query match the instructor's values
+
+/* And then we need to group by MSA Income */
+
+SELECT tbl.msa_income, SUM(tbl.sum_sprice)/SUM(tbl.days_with_sale) AS avg_daily_revenue
+      FROM(SELECT t.store as t_store, EXTRACT(YEAR FROM t.saledate) AS Year_Num, EXTRACT(MONTH FROM t.saledate) 
+                   AS Month_Num, COUNT(DISTINCT t.saledate) AS days_with_sale, 
+                   SUM(t.sprice) AS sum_sprice,
+                   Top_Income_Stores.msa_income,
+                   CASE WHEN (Month_Num = 8 AND Year_Num = 2005) THEN 'Exclude'
+                        WHEN days_with_sale < 20 THEN 'Exclude'
+                   ELSE 'Include'
+                   END AS Exclusion
+            FROM trnsact t JOIN (SELECT store, msa_income 
+                           FROM store_msa
+                           ) AS Top_Income_Stores
+                       ON t.store = Top_Income_Stores.store
+      WHERE t.stype = 'P'
+      GROUP BY t_store, Year_Num, Month_Num, Top_Income_Stores.msa_income
+      HAVING Exclusion = 'Include') AS tbl
+GROUP BY msa_income
+ORDER BY msa_income DESC;
+
+/* === Find brand of SKU with greatest standard deviation of sale price excluding SKUs with <100 transactions === */
+
+SELECT Top_10_sku.sku, i.brand, Top_10_sku.stddev_sprice, Top_10_sku.num
+FROM (SELECT TOP 10 sku, STDDEV_SAMP(sprice) AS stddev_sprice,
+      COUNT(*) AS num
+      FROM trnsact
+      WHERE stype = 'P'
+      GROUP BY sku
+      HAVING num > 100
+      ORDER BY stddev_sprice DESC) AS Top_10_sku
+JOIN skuinfo i
+  ON Top_10_sku.sku = i.sku
+ORDER BY Top_10_sku.stddev_sprice DESC;
+-- OUTPUT (top row):
+-- sku,     brand,   stddev, num
+-- 2762683, HART SCH, 175.8, 106
+
+-- Used the below queries to investigate this SKU
+SELECT *
+FROM trnsact
+WHERE sku = 2762683
+ORDER BY sprice DESC;
+
+SELECT *
+FROM skuinfo
+WHERE sku = 2762683;
+
+/* Note that very few transactions were made for the original sale price.
+   Item was often discounted over 75%. Think original price was set too high. */
+   
+-- The below query finds a few metrics for sales made in each month, other adaptations may be needed in the future
+
+SELECT filtered_data.Year_Num, filtered_data.Month_Num, 
+       SUM(filtered_data.days_with_sale) AS sum_sale_days,
+       SUM(filtered_data.sum_daily_revenue) AS total_daily_revenue,
+       total_daily_revenue/sum_sale_days AS avg_daily_revenue_by_store
+FROM (SELECT t.store AS t_store, EXTRACT(YEAR FROM t.saledate) AS Year_Num, 
+             EXTRACT(MONTH FROM t.saledate) 
+             AS Month_Num, COUNT(DISTINCT t.saledate) AS days_with_sale, 
+             SUM(t.sprice) AS sum_daily_revenue,
+             CASE WHEN (Month_Num = 8 AND Year_Num = 2005) THEN 'Exclude'
+                  WHEN days_with_sale < 20 THEN 'Exclude'
+             ELSE 'Include'
+             END AS Exclusion
+      FROM trnsact t
+      WHERE t.stype = 'P'
+      GROUP BY t_store, Year_Num, Month_Num
+      HAVING Exclusion = 'Include') AS filtered_data
+GROUP BY Year_Num, Month_Num
+ORDER BY avg_daily_revenue_by_store DESC;
+
+/* Which department, in which city and state of what store, had the greatest %
+   increase in average daily sales revenue from November to December? */
+   
+SELECT store, city, state, deptdesc, 
+       COUNT(DISTINCT saledate) AS days_with_sale,
+       SUM(CASE WHEN Month_Num = 11 THEN sprice END) AS Nov_Sales,
+       SUM(CASE WHEN Month_Num = 12 THEN sprice END) AS Dec_Sales,
+       ((Dec_Sales - Nov_Sales) / Nov_Sales) * 100 AS Pct_Change
+FROM (SELECT s.sku, d.deptdesc
+      FROM deptinfo d JOIN skuinfo s
+        ON s.dept = d.dept) AS dept_sku JOIN 
+     (SELECT t.store, s.city, s.state, t.sku, t.sprice, t.saledate, 
+             EXTRACT(YEAR FROM t.saledate) AS Year_Num, 
+             EXTRACT(MONTH FROM t.saledate) AS Month_Num, 
+             CASE WHEN (Month_Num NOT IN (11,12)) THEN 'Exclude'
+             ELSE 'Include'
+             END AS Exclusion
+      FROM trnsact t JOIN strinfo s
+        ON s.store = t.store
+      WHERE t.stype = 'P' AND Exclusion = 'Include') AS trnsact_store 
+  ON dept_sku.sku = trnsact_store.sku
+GROUP BY store, city, state, deptdesc
+HAVING Nov_Sales IS NOT NULL AND Dec_Sales IS NOT NULL AND days_with_sale > 20 --Tweak to adjust exclusion of bad data
+ORDER BY pct_change DESC;
+
+/* What is the city and state of the store that had the greatest decrease in
+   average daily revenue from August to September? */
+
+SELECT store, city, state, --remove store if you want to group by city
+       COUNT(DISTINCT saledate) AS days_with_sale,
+       SUM(CASE WHEN Month_Num = 8 THEN sprice END) AS Aug_Sales,
+       SUM(CASE WHEN Month_Num = 9 THEN sprice END) AS Sep_Sales,
+       ((Sep_Sales - Aug_Sales) / Aug_Sales) * 100 AS Pct_Change
+FROM (SELECT t.store, s.city, s.state, t.sku, t.sprice, t.saledate, 
+             EXTRACT(YEAR FROM t.saledate) AS Year_Num, 
+             EXTRACT(MONTH FROM t.saledate) AS Month_Num, 
+             CASE WHEN (Month_Num NOT IN (8,9)) THEN 'Exclude'
+             ELSE 'Include'
+             END AS Exclusion
+      FROM trnsact t JOIN strinfo s
+        ON s.store = t.store
+      WHERE t.stype = 'P' AND Exclusion = 'Include') AS trnsact_store 
+GROUP BY store, city, state
+HAVING Aug_Sales IS NOT NULL AND Sep_Sales IS NOT NULL AND days_with_sale > 20 --Tweak to adjust exclusion of bad data
+ORDER BY pct_change ASC;
+
+/* Extract the month with the greatest revenue */
+SELECT t.store AS t_store, EXTRACT(YEAR FROM t.saledate) AS Year_Num, 
+       EXTRACT(MONTH FROM t.saledate) AS Month_Num, 
+       COUNT(DISTINCT t.saledate) AS days_with_sale, 
+       SUM(t.sprice)/COUNT(DISTINCT t.saledate) AS average_daily_revenue,
+       RANK() OVER (PARTITION BY t_store ORDER BY average_daily_revenue DESC) AS Month_Ranking,
+       CASE WHEN (Month_Num = 8 AND Year_Num = 2005) THEN 'Exclude'
+            WHEN days_with_sale < 20 THEN 'Exclude'
+       ELSE 'Include'
+       END AS Exclusion
+QUALIFY Month_Ranking = 1
+FROM trnsact t
+WHERE t.stype = 'P'
+GROUP BY t_store, Year_Num, Month_Num
+HAVING Exclusion = 'Include'
+ORDER BY Month_Ranking ASC;
 
 /* WEEK ENDING 20180415 */
 
